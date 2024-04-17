@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>{{ golfer.username }}'s Trophy Room</h1>
+<div>
+    <h2>Statistics</h2>
+    <p>Average Score: {{ golfer.statistics.average_score }}</p>
+    <p>Fairway Hit %: {{ golfer.statistics.fairway_hit_percentage }}</p>
+    <!-- Other stats -->
+</div>
+<div>
+    <h2>Milestones</h2>
+    {% for milestone in golfer.milestones %}
+    <p>{{ milestone.date }}: {{ milestone.type }} - {{ milestone.details }}</p>
+    {% endfor %}
+</div>
+{% endblock %}

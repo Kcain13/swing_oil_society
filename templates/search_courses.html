@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Search Golf Course</h2>
+<form id="courseSearchForm">
+    <input type="text" name="course_name" placeholder="Enter course name" required>
+    <button type="submit">Search</button>
+</form>
+
+<div id="searchResults">
+    <!-- Search results will be populated here -->
+</div>
+
+<script>
+    document.getElementById('courseSearchForm').onsubmit = function (e) {
+        e.preventDefault();
+        var courseName = document.getElementsByName('course_name')[0].value;
+        fetch("{{ url_for('search_course') }}", {
+            method: 'POST',
+            body: JSON.stringify({ course_name: courseName }),
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': "{{ csrf_token() }}"
+            }
+        }).then(response => response.json())
+            .then(data => {
+                let resultsDiv = document.getElementById('searchResults');
+                resultsDiv.innerHTML = '';  // Clear previous results
+                data.forEach(course => {
+                    let div = document.createElement('div');
+                    div.textContent = course.name + ' - ' + course.location;
+                    resultsDiv.appendChild(div);
+                });
+            }).catch(error => console.error('Error:', error));
+    };
+</script>
+{% endblock %}
