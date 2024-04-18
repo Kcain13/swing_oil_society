@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Course: {{ course.name }}</h1>
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2>Tees and Holes</h2>
+            {% for tee in course.tees %}
+            <div class="card mt-3">
+                <div class="card-header">
+                    Tee: {{ tee.name }}
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for hole in tee.holes %}
+                    <li class="list-group-item">
+                        Hole {{ hole.number }} - Par {{ hole.par }}, Yardage: {{ hole.yardage }} yards, Handicap: {{
+                        hole.handicap }}
+                    </li>
+                    {% endfor %}
+                    {% if tee.holes|length == 0 %}
+                    <li class="list-group-item">No holes registered under this tee.</li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% endfor %}
+            {% if course.tees|length == 0 %}
+            <p>No tees registered for this course.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

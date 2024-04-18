@@ -1,7 +1,11 @@
 {% extends 'base.html' %}
-
-{% block title %}Login - Golf App{% endblock %}
-
 {% block content %}
 <h2>Login</h2>
-<form
+<form method="post" action="{{url_for('login')}}">
+    {{ form.hidden_tag() }}
+    <div>{{ form.username.label }} {{ form.username }}</div>
+    <div>{{ form.password.label }} {{ form.password }}</div>
+    <div>{{ form.remember_me.label }} {{ form.remember_me }}</div>
+    <div>{{ form.submit() }}</div>
+</form>
+{% endblock %}

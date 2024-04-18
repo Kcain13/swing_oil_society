@@ -1,8 +1,18 @@
 {% extends 'base.html' %}
-
-{% block title %}Home - Golf App{% endblock %}
-
+{% block title %}Welcome to the Golf App{% endblock %}
 {% block content %}
-<h1>Welcome to Golf App</h1>
-<p>This is your one-stop destination for managing your golf scores and competing with friends.</p>
+<h1>Welcome to the Golf App</h1>
+<p>Your ultimate companion for tracking golf scores and much more!</p>
+
+<div class="navigation">
+    <ul>
+        <li><a href="{{ url_for('golfer_trophy_room', golfer_id=current_user.id) }}">View Your Trophy Room</a></li>
+        <li><a href="{{ url_for('start_round', course_id=123) }}">Start Gameplay</a></li>
+        <li>
+            <form action="{{ url_for('search_courses_route') }}" method="get">
+                <input type="search" name="query" placeholder="Search course name" required>
+                <button type="submit">Search</button>
+        </li>
+    </ul>
+</div>
 {% endblock %}

@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Your Profile</h2>
+<form method="post">
+    {{ form.hidden_tag() }}
+    <div>
+        <label for="email">Email:</label>
+        {{ form.email(size=32) }}
+        {% if form.email.errors %}
+        {% for error in form.email.errors %}
+        <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+        {% endif %}
+    </div>
+    <div>
+        <label for="handicap">Handicap:</label>
+        {{ form.handicap(size=5) }}
+        {% if form.handicap.errors %}
+        {% for error in form.handicap.errors %}
+        <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+        {% endif %}
+    </div>
+    <div>{{ form.submit() }}</div>
+</form>
+<a href="{{ url_for('golfer_trophy_room', golfer_id=current_user.id) }}">View Your Trophy Room</a>
+{% endblock %}

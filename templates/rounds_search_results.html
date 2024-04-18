@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Search Results</h2>
+    {% if rounds %}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Date Played</th>
+                <th>Golfer ID</th>
+                <th>Course Name</th>
+                <th>Game Type</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for round in rounds %}
+            <tr>
+                <td>{{ round.date_played.strftime('%Y-%m-%d') }}</td>
+                <td>{{ round.golfer_id }}</td>
+                <td>{{ round.course.name }}</td>
+                <td>{{ round.game_type.name }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No rounds found for the specified criteria.</p>
+    {% endif %}
+</div>
+{% endblock %}

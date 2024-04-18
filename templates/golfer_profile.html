@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>{{ golfer.username }}'s Profile</h1>
+<div>
+    <p>Email: {{ golfer.email }}</p>
+    <p>GHIN ID: {{ golfer.ghin_id }}</p>
+    <p>Current Handicap: {{ handicap if handicap else 'Not available' }}</p>
+    <p><a href="{{ url_for('golfer_trophy_room', golfer_id=golfer.id) }}">Visit Trophy Room</a></p>
+    <p><a href="{{ url_for('view_statistics', golfer_id=golfer.id) }}">View Statistics</a></p>
+    <p><a href="{{ url_for('view_golfer_rounds', golfer_id=golfer.id) }}">View Rounds</a></p>
+</div>
+{% endblock %}

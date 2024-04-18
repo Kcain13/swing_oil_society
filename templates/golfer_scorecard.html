@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Scorecard for {{ round.course.name }}</h1>
+<p>Playing from: {{ round.tee.name }}</p>
+
+<!-- Navigation for viewing different parts of the scorecard -->
+<div>
+    <a href="{{ url_for('scorecard', round_id=round.id, view='current') }}">Current Hole</a> |
+    <a href="{{ url_for('scorecard', round_id=round.id, view='front') }}">Front Nine</a> |
+    <a href="{{ url_for('scorecard', round_id=round.id, view='back') }}">Back Nine</a>
+</div>
+
+<form action="{{ url_for('scorecard', round_id=round.id) }}" method="post">
+    {{ form.hidden_tag() }}
+    <table>
+        <thead>
+            <tr>
+                <th>Hole Number</th>
+                <th>Par</th>
+                <th>Yardage</th>
+                <th>Strokes</th>
+                {% if view == 'current' %}
+                <th>Fairway Hit</th>
+                <th>Green in Regulation</th>
+                <th>Putts</th>
+                <th>Sand Shots</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for hole in holes %}
+            <tr>
+                <td>{{ hole.number }}</td>
+                <td>{{ hole.par }}</td>
+                <td>{{ hole.yardage }}</td>
+                <td>
+                    <input type="number" name="strokes_{{ hole.id }}" min="1"
+                        value="{{ scores[hole.number-1].strokes if scores and scores[hole.number-1] else '' }}">
+                </td>
+                {% if view == 'current' %}
+                <td><input type="checkbox" name="fairway_hit_{{ hole.id }}" {{ 'checked' if
+                        scores[hole.number-1].fairway_hit else '' }}></td>
+                <td><input type="checkbox" name="green_regulation_{{ hole.id }}" {{ 'checked' if
+                        scores[hole.number-1].green_regulation else '' }}></td>
+                <td><input type="number" name="putts_{{ hole.id }}"
+                        value="{{ scores[hole.number-1].putts if scores[hole.number-1] else '' }}"></td>
+                <td><input type="number" name="sand_shots_{{ hole.id }}"
+                        value="{{ scores[hole.number-1].sand_shots if scores[hole.number-1] else '' }}"></td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <button type="submit">Update Scores</button>
+</form>
+{% endblock %}

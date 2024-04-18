@@ -1,0 +1,1 @@
+flask db migrate -m "Add ghin_id to golfers"

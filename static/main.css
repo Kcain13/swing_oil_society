@@ -1,0 +1,94 @@
+/* main.css */
+body {
+    background-color: #FDF5E6;
+    /* A light sand color as the background */
+    color: #002B5C;
+    /* Navy color for text */
+    font-family: Arial, sans-serif;
+    /* A clean, readable font */
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    color: #4A412A;
+    /* Darker sand color for headings */
+}
+
+a {
+    color: #0077CC;
+    /* A shade of navy for links */
+    text-decoration: none;
+    /* Removes underline from links */
+}
+
+a:hover {
+    text-decoration: underline;
+    /* Underline links on hover for better interaction */
+}
+
+/* Navigation bar at the bottom of the page */
+nav {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    background-color: #4A412A;
+    /* Darker sand color for the navbar background */
+    color: white;
+    padding: 10px 0;
+    text-align: center;
+}
+
+nav a {
+    color: white;
+    padding: 10px 20px;
+    display: inline-block;
+}
+
+/* Table styling */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    /* Ensures borders between cells are merged */
+}
+
+th,
+td {
+    text-align: left;
+    padding: 8px;
+    border-bottom: 1px solid #DDD;
+    /* Light gray border for a subtle row separation */
+}
+
+form {
+    margin-top: 20px;
+}
+
+input[type="number"],
+input[type="text"],
+input[type="checkbox"] {
+    margin: 4px;
+    padding: 8px;
+    border: 1px solid #CCC;
+    /* Light gray border for input fields */
+    border-radius: 4px;
+    /* Rounded corners for the input fields */
+}
+
+button {
+    background-color: #0077CC;
+    /* Navy background for buttons */
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+button:hover {
+    background-color: #005A9C;
+    /* Darker navy on hover for better interaction */
+}

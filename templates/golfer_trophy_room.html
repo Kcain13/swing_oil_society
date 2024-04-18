@@ -3,15 +3,28 @@
 {% block content %}
 <h1>{{ golfer.username }}'s Trophy Room</h1>
 <div>
+    <h2>Handicap: {{ handicap if handicap else 'Not available' }}</h2>
     <h2>Statistics</h2>
-    <p>Average Score: {{ golfer.statistics.average_score }}</p>
-    <p>Fairway Hit %: {{ golfer.statistics.fairway_hit_percentage }}</p>
-    <!-- Other stats -->
+    <p>Average Score: {{ golfer.statistics.average_score if golfer.statistics and golfer.statistics.average_score else
+        'N/A' }}</p>
+    <p>Fairway Hit %: {{ golfer.statistics.fairway_hit_percentage if golfer.statistics and
+        golfer.statistics.fairway_hit_percentage else 'N/A' }}</p>
+    <p>Green in Regulation %: {{ (golfer.statistics.green_in_regulation_percentage | round(2)) if golfer.statistics and
+        golfer.statistics.green_in_regulation_percentage is not none else 'N/A' }}%</p>
+    <p>Average Number of Putts per Round: {{ (golfer.statistics.putts_per_round | round(2)) if golfer.statistics and
+        golfer.statistics.putts_per_round else 'N/A' }}</p>
+    <p>Bunker Save %: {{ (golfer.statistics.bunker_save_percentage | round(2)) if golfer.statistics and
+        golfer.statistics.bunker_save_percentage else 'N/A' }}%</p>
+    <!-- Add other statistics as needed -->
 </div>
 <div>
     <h2>Milestones</h2>
-    {% for milestone in golfer.milestones %}
-    <p>{{ milestone.date }}: {{ milestone.type }} - {{ milestone.details }}</p>
+    {% if milestones %}
+    {% for milestone in milestones %}
+    <p>{{ milestone.date.strftime('%Y-%m-%d') }}: {{ milestone.type }} - {{ milestone.details }}</p>
     {% endfor %}
+    {% else %}
+    <p>No milestones achieved yet.</p>
+    {% endif %}
 </div>
 {% endblock %}

@@ -1,24 +1,46 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, BooleanField, IntegerField
-from wtforms.validators import DataRequired, Email, Length, EqualTo, Optional
-from wtforms.ext.sqlalchemy.fields import QuerySelectField
-
-from models import db, GameType
+from wtforms import StringField, PasswordField, SubmitField, BooleanField, IntegerField, DateField
+from wtforms.validators import DataRequired, Email, Length, EqualTo, Optional, ValidationError
+from wtforms_sqlalchemy.fields import QuerySelectField
+from werkzeug.urls import url_parse
+from models import db, GameType, Course, Tee, Golfer
 
 
 def game_type_choices():
     return GameType.query.all()
 
 
+class SearchRoundsForm(FlaskForm):
+    # Optional: remove if not needed
+    golfer_id = StringField('Golfer ID', validators=[Optional()])
+    start_date = DateField('Start Date', format='%Y-%m-%d',
+                           validators=[DataRequired()])
+    end_date = DateField('End Date', format='%Y-%m-%d',
+                         validators=[DataRequired()])
+    game_type = QuerySelectField('Game Type', query_factory=game_type_choices,
+                                 get_label='name', allow_blank=True, blank_text='Any')
+    submit = SubmitField('Search Rounds')
+
+
 class RegistrationForm(FlaskForm):
-    username = StringField('Username', validators=[
-                           DataRequired(), Length(min=4, max=25)])
+    username = StringField('Username', validators=[DataRequired()])
     email = StringField('Email', validators=[DataRequired(), Email()])
-    password = PasswordField('Password', validators=[
-                             DataRequired(), Length(min=6, max=40)])
-    confirm_password = PasswordField('Confirm Password', validators=[
-                                     DataRequired(), EqualTo('password')])
+    password = PasswordField('Password', validators=[DataRequired()])
+    # Optional GHIN ID field
+    ghin_id = StringField('GHIN ID', validators=[Optional()])
     submit = SubmitField('Register')
+
+    def validate_username(self, username):
+        user = Golfer.query.filter_by(username=username.data).first()
+        if user:
+            raise ValidationError(
+                'That username is already taken. Please choose a different one.')
+
+    def validate_email(self, email):
+        user = Golfer.query.filter_by(email=email.data).first()
+        if user:
+            raise ValidationError(
+                'That email is already being used. Please choose a different one.')
 
 
 class LoginForm(FlaskForm):
@@ -47,13 +69,18 @@ class CourseSearchForm(FlaskForm):
 
 
 class GameInitiationForm(FlaskForm):
+    course = QuerySelectField('Course', query_factory=lambda: Course.query.all(
+    ), get_label='name', allow_blank=False)
+    tee = QuerySelectField('Tee', query_factory=lambda: Tee.query.all(
+    ), get_label='name', allow_blank=False)
     game_type = QuerySelectField(
-        'Game Type', query_factory=game_type_choices, allow_blank=False, get_label='name')
+        'Game Type', query_factory=game_type_choices, get_label='name', allow_blank=False)
     use_handicap = BooleanField('Use Handicap')
     submit = SubmitField('Start Game')
 
 
 class ProfileForm(FlaskForm):
     email = StringField('New Email', validators=[DataRequired(), Email()])
+    ghin_id = StringField('GHIN ID', validators=[Optional()])
     handicap = IntegerField('Handicap', validators=[Optional()])
     submit = SubmitField('Update Profile')

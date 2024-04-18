@@ -1,29 +1,91 @@
 {% extends 'base.html' %}
 
-{% block title %}Register - Golf App{% endblock %}
-
 {% block content %}
-<h2>Register</h2>
-<form method="post">
-    {{ form.hidden_tag() }}
-    <div class="form-group">
-        {{ form.username.label(class="form-label") }}
-        {{ form.username(class="form-control") }}
-    </div>
-    <div class="form-group">
-        {{ form.email.label(class="form-label") }}
-        {{ form.email(class="form-control") }}
-    </div>
-    <div class="form-group">
-        {{ form.password.label(class="form-label") }}
-        {{ form.password(class="form-control") }}
-    </div>
-    <div class="form-group">
-        {{ form.confirm_password.label(class="form-label") }}
-        {{ form.confirm_password(class="form-control") }}
-    </div>
-    <div class="form-group">
-        {{ form.submit(class="btn btn-primary") }}
-    </div>
-</form>
+<div class="container">
+    <h2 class="header">Register</h2>
+    <form method="post" class="form">
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            {{ form.username.label(class="form-label") }}
+            {{ form.username(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.email.label(class="form-label") }}
+            {{ form.email(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.password.label(class="form-label") }}
+            {{ form.password(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.ghin_id.label(class="form-label") }}
+            {{ form.ghin_id(class="form-control") }}
+        </div>
+
+        <div class="form-group">
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .container {
+        width: 80%;
+        margin: 20px auto;
+        padding: 20px;
+        background-color: #fff5e1;
+        /* light sand color */
+        border: 1px solid #ddd;
+        border-radius: 8px;
+    }
+
+    .header {
+        color: #002f6c;
+        /* navy blue */
+        text-align: center;
+    }
+
+    .form {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 5px;
+        color: #002f6c;
+        /* navy blue */
+        font-weight: bold;
+    }
+
+    .form-control {
+        padding: 8px 12px;
+        border: 2px solid #002f6c;
+        /* navy blue */
+        border-radius: 4px;
+    }
+
+    .btn-primary {
+        background-color: #002f6c;
+        /* navy blue */
+        color: #ffffff;
+        padding: 10px 15px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        background-color: #001940;
+        /* darker navy */
+    }
+</style>
 {% endblock %}

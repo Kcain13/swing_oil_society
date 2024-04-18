@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Round Details</h2>
+    <!-- Round statistics display here -->
+    <div id="graph"></div>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+        const figures = JSON.parse('{{ graph_json | tojson | safe }}');
+        Plotly.newPlot('graph', figures.data, figures.layout);
+    </script>
+</div>
+{% endblock %}
