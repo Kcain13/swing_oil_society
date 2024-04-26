@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mt-3">Start a New Round at {{ course.get('Facility', {}).get('FacilityName', 'Not provided by USGA') }}
+    </h1>
+    <form action="{{ url_for('start_round') }}" method="post">
+        <div class="form-group">
+            <label for="teeSet">Select Tee Set:</label>
+            <select class="form-control" id="teeSet" name="teeSet">
+                {% for teeSet in course.get('TeeSets', []) %}
+                <option value="{{ teeSet['TeeSetRatingId'] }}">{{ teeSet.get('TeeSetRatingName', 'No name provided') }}
+                    - {{ teeSet.get('Gender', 'Not specified') }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="date">Date:</label>
+            <input type="date" class="form-control" id="date" name="date" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Start Round</button>
+    </form>
+</div>
+{% endblock %}

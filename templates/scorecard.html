@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mt-3">Scorecard for {{ course.get('Facility', {}).get('FacilityName', 'Not provided by USGA') }}</h1>
+    <form action="{{ url_for('submit_scores') }}" method="post">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Hole</th>
+                    <th>Par</th>
+                    <th>Length (yards)</th>
+                    <th>Score</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for hole in selected_tee_set.get('Holes', []) %}
+                <tr>
+                    <td>{{ hole['Number'] }}</td>
+                    <td>{{ hole.get('Par', 'N/A') }}</td>
+                    <td>{{ hole.get('Length', 'N/A') }}</td>
+                    <td><input type="number" name="score_{{ hole['Number'] }}" min="1" class="form-control" required>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button type="submit" class="btn btn-success">Submit Scores</button>
+    </form>
+</div>
+{% endblock %}

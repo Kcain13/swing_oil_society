@@ -2,7 +2,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, BooleanField, IntegerField, DateField
 from wtforms.validators import DataRequired, Email, Length, EqualTo, Optional, ValidationError
 from wtforms_sqlalchemy.fields import QuerySelectField
-from werkzeug.urls import url_parse
+
 from models import db, GameType, Course, Tee, Golfer
 
 
@@ -23,11 +23,13 @@ class SearchRoundsForm(FlaskForm):
 
 
 class RegistrationForm(FlaskForm):
+    first_name = StringField('First Name', validators=[DataRequired()])
+    last_name = StringField('Last Name', validators=[DataRequired()])
     username = StringField('Username', validators=[DataRequired()])
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Password', validators=[DataRequired()])
-    # Optional GHIN ID field
-    ghin_id = StringField('GHIN ID', validators=[Optional()])
+    ghin_id = StringField('GHIN ID', validators=[DataRequired()])
+    state = StringField('State of Residency', validators=[DataRequired()])
     submit = SubmitField('Register')
 
     def validate_username(self, username):

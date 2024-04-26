@@ -1,94 +1,96 @@
-/* main.css */
+/* Define the primary color scheme */
+:root {
+    --primary-color: #495057;
+    /* Dark blue from logo */
+    --secondary-color: #FFD700;
+    /* Gold color */
+    --accent-color: #F28F3B;
+    /* Accent color from the golfer's shirt */
+    --background-color: #FFF8DC;
+    /* Sandy hue background */
+    --font-family: 'Playfair Display', serif;
+    /* Font that matches the vintage feel */
+}
+
+/* Apply a global font and background */
 body {
-    background-color: #FDF5E6;
-    /* A light sand color as the background */
-    color: #002B5C;
-    /* Navy color for text */
-    font-family: Arial, sans-serif;
-    /* A clean, readable font */
+    font-family: var(--font-family);
+    background-color: var(--background-color);
+    color: var(--primary-color);
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-    color: #4A412A;
-    /* Darker sand color for headings */
-}
-
-a {
-    color: #0077CC;
-    /* A shade of navy for links */
-    text-decoration: none;
-    /* Removes underline from links */
-}
-
-a:hover {
-    text-decoration: underline;
-    /* Underline links on hover for better interaction */
-}
-
-/* Navigation bar at the bottom of the page */
-nav {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-    background-color: #4A412A;
-    /* Darker sand color for the navbar background */
+/* Style the navigation bar */
+.navbar {
+    background-color: var(--primary-color);
     color: white;
-    padding: 10px 0;
+}
+
+.navbar a {
+    color: var(--secondary-color);
+}
+
+/* Style the buttons */
+button,
+.btn {
+    background-color: var(--secondary-color);
+    color: var(--primary-color);
+    border: none;
+    padding: 10px 20px;
+    text-transform: uppercase;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+button:hover,
+.btn:hover {
+    background-color: var(--accent-color);
+}
+
+/* Style the footer */
+footer {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 20px;
     text-align: center;
 }
 
-nav a {
-    color: white;
-    padding: 10px 20px;
-    display: inline-block;
+/* Profile and Trophy Room specific styles */
+.golfer-profile,
+.golfer-trophy-room {
+    border: 1px solid var(--primary-color);
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
 }
 
-/* Table styling */
-table {
-    width: 100%;
-    border-collapse: collapse;
-    /* Ensures borders between cells are merged */
+/* Scorecard specific styles */
+.golfer-scorecard {
+    background-color: var(--secondary-color);
+    color: var(--primary-color);
+    padding: 15px;
+    border-radius: 10px;
 }
 
-th,
-td {
-    text-align: left;
-    padding: 8px;
-    border-bottom: 1px solid #DDD;
-    /* Light gray border for a subtle row separation */
-}
-
-form {
-    margin-top: 20px;
-}
-
-input[type="number"],
-input[type="text"],
-input[type="checkbox"] {
-    margin: 4px;
-    padding: 8px;
-    border: 1px solid #CCC;
-    /* Light gray border for input fields */
-    border-radius: 4px;
-    /* Rounded corners for the input fields */
-}
-
-button {
-    background-color: #0077CC;
-    /* Navy background for buttons */
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    cursor: pointer;
+/* Form Elements */
+input,
+select,
+textarea {
+    border: 1px solid var(--primary-color);
+    padding: 10px;
     border-radius: 5px;
+    margin-bottom: 10px;
+    width: 100%;
 }
 
-button:hover {
-    background-color: #005A9C;
-    /* Darker navy on hover for better interaction */
+input[type="submit"],
+button[type="submit"] {
+    cursor: pointer;
+}
+
+/* Additional style for course-related pages */
+.view-course,
+.search-courses {
+    background-image: url('path-to-sand-texture');
+    background-repeat: no-repeat;
+    background-size: cover;
 }

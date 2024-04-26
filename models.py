@@ -11,13 +11,28 @@ import bcrypt
 db = SQLAlchemy()
 
 
+class APIToken(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    token = db.Column(db.String, nullable=False)
+    expiry = db.Column(db.DateTime, nullable=False)
+
+    @classmethod
+    def get_current_token(cls):
+        # This retrieves the most recent token that hasn't expired.
+        now = datetime.utcnow()
+        return cls.query.filter(cls.expiry > now).order_by(cls.expiry.desc()).first()
+
+
 class Golfer(db.Model, UserMixin):
     __tablename__ = 'golfers'
     id = db.Column(db.Integer, primary_key=True)
+    first_name = db.Column(db.String(100), nullable=False)
+    last_name = db.Column(db.String(100), nullable=False)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128))
     ghin_id = db.Column(db.Integer, unique=True, nullable=True)
+    state = db.Column(db.String(120), nullable=False)
     statistics = db.relationship(
         'Statistic', back_populates='golfer', uselist=False, lazy='select')
     milestones = db.relationship('Milestone', backref='golfer', lazy='select')
@@ -53,7 +68,22 @@ class Golfer(db.Model, UserMixin):
 class Course(db.Model):
     __tablename__ = 'courses'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(150))
+    course_id = db.Column(db.Integer, unique=True, nullable=False)
+    name = db.Column(db.String(255), nullable=False)
+    status = db.Column(db.String(50))
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+    facility_id = db.Column(db.Integer)
+    facility_name = db.Column(db.String(255))
+    full_name = db.Column(db.String(255))
+    address = db.Column(db.String(255))
+    city = db.Column(db.String(100))
+    state = db.Column(db.String(50))
+    zip_code = db.Column(db.String(20))
+    country = db.Column(db.String(50))
+    phone = db.Column(db.String(20))
+    email = db.Column(db.String(100))
+    updated_on = db.Column(db.DateTime)
     tees = db.relationship('Tee', backref='course',
                            lazy='dynamic', cascade="all, delete-orphan")
 

@@ -9,10 +9,9 @@ import plotly.express as px
 from apscheduler.schedulers.background import BackgroundScheduler
 from models import db, Golfer, Course, Tee, Hole, Round, Score, Milestone, Statistic, connect_db, GameType, check_and_create_milestones
 from forms import RegistrationForm, LoginForm, ScoreEntryForm, GolferSearchForm, CourseSearchForm, GameInitiationForm, ProfileForm, SearchRoundsForm
-from services import fetch_course_details, get_admin_token, search_courses, fetch_playing_handicaps, fetch_golfer_handicap
+from services import fetch_course_details, get_admin_token, search_courses, fetch_golfer_handicap, save_course_data
 from datetime import datetime
 
-import bcrypt
 import os
 from dotenv import load_dotenv
 
@@ -26,27 +25,17 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///swing_oil_society'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = False
 app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = True
+app.config['GHIN_ADMIN_USER'] = os.getenv('GHIN_ADMIN_USER')
+app.config['GHIN_ADMIN_PASSWORD'] = os.getenv('GHIN_ADMIN_PASSWORD')
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "it's a secret")
-GHIN_ADMIN_USER = os.getenv('GHIN_ADMIN_USER')
-GHIN_ADMIN_PASSWORD = os.getenv('GHIN_ADMIN_PASSWORD')
 
-if not GHIN_ADMIN_USER or not GHIN_ADMIN_PASSWORD:
-    raise ValueError(
-        "GHIN API credentials are not set in environment variables")
+
+if not app.config['GHIN_ADMIN_USER'] or not app.config['GHIN_ADMIN_PASSWORD']:
+    raise Exception("API credentials are not set in environment variables.")
 
 connect_db(app)
 with app.app_context():
     db.create_all()
-
-scheduler = BackgroundScheduler()
-
-
-def refresh_token():
-    get_admin_token()
-
-
-scheduler.add_job(func=refresh_token, trigger="interval", hours=23)
-scheduler.start()
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -58,10 +47,11 @@ def load_user(user_id):
     return Golfer.query.get(int(user_id))
 
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 @login_required
 def home():
-    return render_template('home.html')
+    form = CourseSearchForm()
+    return render_template('home.html', form=form)
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -69,9 +59,12 @@ def register():
     form = RegistrationForm()
     if form.validate_on_submit():
         new_golfer = Golfer(
+            first_name=form.first_name.data,
+            last_name=form.last_name.data,
             username=form.username.data,
             email=form.email.data,
-            # Only if ghin_id is part of your Golfer model
+            ghin_id=form.ghin_id.data,
+            state=form.state.data
         )
         new_golfer.set_password(form.password.data)
         db.session.add(new_golfer)
@@ -85,15 +78,12 @@ def register():
 def login():
     form = LoginForm()
     if form.validate_on_submit():
-        golfer = Golfer.query.filter_by(
-            username=form.username.data).first()
-        # Check password with bcrypt
+        golfer = Golfer.query.filter_by(username=form.username.data).first()
         if golfer and golfer.check_password(form.password.data):
             login_user(golfer, remember=form.remember_me.data)
-            # Check for a 'next' query parameter and ensure it is safe to redirect
+
             next_page = request.args.get('next')
-            if not next_page or url_parse(next_page).netloc != '':
-                # 'home' should be the endpoint for the homepage after login
+            if not next_page or not next_page.startswith('/'):
                 next_page = url_for('home')
             return redirect(next_page)
         else:
@@ -119,34 +109,40 @@ def profile():
     return render_template('profile.html', form=form)
 
 
-@app.route('/search_courses_route', methods=['GET'])
+@app.route('/search_courses_route', methods=['GET', 'POST'])
 @login_required
 def search_courses_route():
-    query = request.args.get('query', '')
-    if not query:
-        # If no query is provided, redirect to the home page or an appropriate page
-        flash('Search by course name', 'warning')
-        return redirect(url_for('home'))
-
-    courses = search_courses(query)
-    if courses is not None:
-        # Render the search_courses.html template, passing the courses
-        return render_template('search_courses.html', courses=courses)
-    else:
-        # If the GHIN API fails, log the error and provide user feedback
-        flash('Failed to fetch courses from GHIN API.', 'error')
-        return redirect(url_for('home'))
+    form = CourseSearchForm()
+    if form.validate_on_submit():  # checks if the form submission is valid
+        query = form.course_name.data  # directly using the validated form data
+        courses = search_courses(query)  # Corrected function call
+        if courses:
+            save_course_data(courses)
+            return render_template('search_courses.html', courses=courses, form=form)
+        else:
+            flash('Failed to fetch course data', 'error')
+            # render the form again with the error message
+            return render_template('search_courses.html', form=form)
+    return render_template('search_courses.html', form=form)
 
 
-@app.route('/course/<int:course_id>')
+@app.route('/courses/<int:course_id>')
 @login_required
 def view_course(course_id):
-    course_details = fetch_course_details(course_id)
-    if course_details:
-        return render_template('view_course.html', course=course_details)
-    else:
-        flash('Course details could not be retrieved.', 'error')
-        return redirect(url_for('search_course_route'))
+    try:
+        course_details = fetch_course_details(course_id)
+        if course_details:
+            # Ensure that we are passing the expected data to the template
+            return render_template('view_course.html', course=course_details)
+        else:
+            # If no course details are found, inform the user and redirect
+            flash('Course details could not be retrieved.', 'error')
+            return redirect(url_for('search_courses_route'))
+    except Exception as e:
+        # Log the exception and provide a feedback message
+        # current_app.logger.error(f"Error retrieving course details: {e}")
+        flash('Failed to retrieve course details due to an error.', 'error')
+        return redirect(url_for('search_courses_route'))
 
 
 @app.route('/start_round/<int:course_id>', methods=['GET', 'POST'])
@@ -329,11 +325,16 @@ def golfer_profile(golfer_id):
     return render_template('golfer_profile.html', golfer=golfer, handicap=handicap)
 
 
-@app.route('/golfer/<int:golfer_id>/trophy_room')
+@app.route('/golfer/<int:golfer_id>/trophy_room', methods=['GET'])
 @login_required
 def golfer_trophy_room(golfer_id):
     golfer = Golfer.query.get_or_404(golfer_id)
-    handicap = fetch_golfer_handicap(golfer.ghin_id)
+    # Ensure that golfer.ghin_id, golfer.last_name, and golfer.state are not None
+    if golfer.ghin_id and golfer.last_name and golfer.state:
+        handicap = fetch_golfer_handicap(
+            golfer.ghin_id, golfer.last_name, golfer.state)
+    else:
+        handicap = "Not available"  # or handle it as appropriate if any info is missing
     milestones = golfer.milestones
     return render_template('golfer_trophy_room.html', golfer=golfer, milestones=milestones, handicap=handicap)
 
