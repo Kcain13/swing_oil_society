@@ -189,7 +189,8 @@ def fetch_course_details(course_id):
             "TeeSets": data.get('TeeSets', []),
             "CourseStatus": data.get('CourseStatus', 'Status Unknown'),
             "CourseCity": data.get('CourseCity', 'City not available'),
-            "CourseState": data.get('CourseState', 'State not available')
+            "CourseState": data.get('CourseState', 'State not available'),
+            "CourseId": data.get('CourseId', 'Courseid not available')
         }
         current_app.logger.debug(course_details)
         return course_details

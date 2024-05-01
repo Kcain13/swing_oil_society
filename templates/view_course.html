@@ -2,51 +2,32 @@
 
 {% block content %}
 <div class="container">
-    <h1 class="mt-3">{{ course.get('Facility', {}).get('FacilityName', 'Not provided by USGA') }}</h1>
-    <div class="card">
-        <div class="card-body">
-            <p><strong>Address:</strong> {{ course['Facility'].get('GeoLocationFormattedAddress',
-                course.get('CourseCity', 'City not available') + ', ' + course.get('CourseState', 'State not
-                available')) or 'Not provided by USGA' }}</p>
-            <p><strong>Status:</strong> {{ course.get('Facility', {}).get('FacilityStatus', 'Not provided by USGA') }}
-            </p>
-            <p><strong>Season Start:</strong> {{ course['Season'].get('SeasonStartDate' , 'Not provided by USGA') }}</p>
-            <p><strong>Season End:</strong> {{ course['Season'].get('SeasonEndDate' , 'Not provided by USGA') }}</p>
-        </div>
-    </div>
+    <h1 class="mt-3">{{ course.get('Facility', {}).get('FacilityName', 'Course Details Not Available') }}</h1>
+    <p><strong>Address:</strong> {{ course['Facility'].get('GeoLocationFormattedAddress', course.get('CourseCity', 'City
+        not available') + ', ' + course.get('CourseState', 'State not available')) }}</p>
+    <p><strong>Status:</strong> {{ course['Facility'].get('FacilityStatus', 'Status Not Available') }}</p>
+    <p><strong>Season Start:</strong> {{ course['Season'].get('SeasonStartDate', 'Season Start Not Available') }}</p>
+    <p><strong>Season End:</strong> {{ course['Season'].get('SeasonEndDate', 'Season End Not Available') }}</p>
 
-    <div class="card mt-3">
-        <div class="card-header">
-            Available Tee Sets
+    {% if course %}
+    <form action="{{ url_for('start_round', course_id=course['CourseId']) }}" method="post">
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            {{ form.tee.label(class="form-label") }}
+            {{ form.tee(class="form-control") }}
         </div>
-        {% if course.get('TeeSets', []) %}
-        {% for teeSet in course['TeeSets'] %}
-
-        <div class="card-body">
-            <h5>{{ teeSet.get('TeeSetRatingName', 'No name provided') }} - {{ teeSet.get('Gender', 'Not specified') }}
-            </h5>
-            <p>Total Yardage: {{ teeSet.get('TotalYardage', 'Yardage not provided') }}</p>
-            <p>Par Total: {{ teeSet.get('TotalPar', 'Par not provided') }}</p>
-            <p>Course Rating: {{ teeSet.get('Ratings', [{}])[0].get('CourseRating', 'Rating not provided') }}</p>
-            <p>Slope Rating: {{ teeSet.get('Ratings', [{}])[0].get('SlopeRating', 'Slope not provided') }}</p>
-            <ul>
-                {% for hole in teeSet.get('Holes', []) %}
-                <li>
-                    Hole {{ hole['Number'] }}: Par {{ hole.get('Par', 'Not specified') }},
-                    Length {{ hole.get('Length', 'Not specified') }} yards,
-                    Handicap {{ hole.get('Allocation', 'Not specified') }}
-                </li>
-                {% else %}
-                <p>No hole data available.</p>
-                {% endfor %}
-            </ul>
+        <div class="form-group">
+            {{ form.game_type.label(class="form-label") }}
+            {{ form.game_type(class="form-control") }}
         </div>
-        {% endfor %}
-        {% else %}
-        <div class="card-body">
-            <p>No tee set information available.</p>
+        <div class="form-group">
+            {{ form.use_handicap.label(class="form-label") }}
+            {{ form.use_handicap() }} Yes
         </div>
-        {% endif %}
-    </div>
+        {{ form.submit(class="btn btn-primary") }}
+    </form>
+    {% else %}
+    <p><strong>Error:</strong> No valid course information available. Please try again.</p>
+    {% endif %}
 </div>
 {% endblock %}

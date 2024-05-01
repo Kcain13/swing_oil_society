@@ -1,5 +1,6 @@
+from flask import request
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, BooleanField, IntegerField, DateField
+from wtforms import StringField, PasswordField, SubmitField, BooleanField, IntegerField, DateField, SelectField
 from wtforms.validators import DataRequired, Email, Length, EqualTo, Optional, ValidationError
 from wtforms_sqlalchemy.fields import QuerySelectField
 
@@ -73,12 +74,22 @@ class CourseSearchForm(FlaskForm):
 class GameInitiationForm(FlaskForm):
     course = QuerySelectField('Course', query_factory=lambda: Course.query.all(
     ), get_label='name', allow_blank=False)
-    tee = QuerySelectField('Tee', query_factory=lambda: Tee.query.all(
+    tee = SelectField('Tee', choices=[], coerce=int)  # Allow blank initially
+    game_type = QuerySelectField('Game Type', query_factory=lambda: GameType.query.all(
     ), get_label='name', allow_blank=False)
-    game_type = QuerySelectField(
-        'Game Type', query_factory=game_type_choices, get_label='name', allow_blank=False)
     use_handicap = BooleanField('Use Handicap')
     submit = SubmitField('Start Game')
+
+    def __init__(self, *args, course_id=None, tee_set_id=None, **kwargs):
+        super(GameInitiationForm, self).__init__(*args, **kwargs)
+        if course_id:
+            self.course.data = Course.query.get(course_id)
+            # Setting choices for the 'tee' field
+            tee_choices = [(tee.id, tee.name)
+                           for tee in Tee.query.filter_by(course_id=course_id).all()]
+            self.tee.choices = tee_choices  # Set the choices directly
+            if tee_set_id:
+                self.tee.data = tee_set_id  # Assuming tee_set_id is the ID you want to select
 
 
 class ProfileForm(FlaskForm):

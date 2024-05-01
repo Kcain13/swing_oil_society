@@ -7,14 +7,14 @@
 <div class="navigation">
     <ul>
         <li><a href="{{ url_for('golfer_trophy_room', golfer_id=current_user.id) }}">View Your Trophy Room</a></li>
-        <li><a href="{{ url_for('start_round', course_id=123) }}">Start Gameplay</a></li>
+
         <li>
             <!-- Use the Flask form to handle course search -->
             <form action="{{ url_for('search_courses_route') }}" method="POST">
                 {{ form.hidden_tag() }}
                 <div class="form-group">
-                    {{ form.course_name(class='form-control', placeholder='Search course') }}
-                    <button type="submit" class="btn btn-primary">Search</button>
+                    {{ form.course_name(class='form-control', placeholder='Search for desired course') }}
+                    <button type="submit" class="btn btn-primary">Enter</button>
                 </div>
             </form>
         </li>
