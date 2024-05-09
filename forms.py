@@ -1,7 +1,7 @@
 from flask import request
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, BooleanField, IntegerField, DateField, SelectField
-from wtforms.validators import DataRequired, Email, Length, EqualTo, Optional, ValidationError
+from wtforms import StringField, PasswordField, SubmitField, BooleanField, IntegerField, DateField, SelectField, FieldList
+from wtforms.validators import DataRequired, Email, Length, EqualTo, Optional, ValidationError, InputRequired, NumberRange
 from wtforms_sqlalchemy.fields import QuerySelectField
 
 from models import db, GameType, Course, Tee, Golfer
@@ -72,8 +72,8 @@ class CourseSearchForm(FlaskForm):
 
 
 class GameInitiationForm(FlaskForm):
-    course = QuerySelectField('Course', query_factory=lambda: Course.query.all(
-    ), get_label='name', allow_blank=False)
+    # course = QuerySelectField('Course', query_factory=lambda: Course.query.all(
+    # ), get_label='name', allow_blank=False)
     tee = SelectField('Tee', choices=[], coerce=int)  # Allow blank initially
     game_type = QuerySelectField('Game Type', query_factory=lambda: GameType.query.all(
     ), get_label='name', allow_blank=False)
@@ -84,12 +84,22 @@ class GameInitiationForm(FlaskForm):
         super(GameInitiationForm, self).__init__(*args, **kwargs)
         if course_id:
             self.course.data = Course.query.get(course_id)
-            # Setting choices for the 'tee' field
-            tee_choices = [(tee.id, tee.name)
-                           for tee in Tee.query.filter_by(course_id=course_id).all()]
-            self.tee.choices = tee_choices  # Set the choices directly
-            if tee_set_id:
-                self.tee.data = tee_set_id  # Assuming tee_set_id is the ID you want to select
+
+
+class ScorecardForm(FlaskForm):
+    scores = FieldList(IntegerField('Score', validators=[InputRequired(
+    ), NumberRange(min=1, max=10)]), min_entries=18, max_entries=18)
+    fairway_hits = FieldList(BooleanField(
+        'Fairway Hit'), min_entries=18, max_entries=18)
+    greens_in_regulation = FieldList(BooleanField(
+        'Green in Regulation'), min_entries=18, max_entries=18)
+    putts = FieldList(IntegerField('Putts', validators=[
+                      InputRequired(), NumberRange(min=0)]), min_entries=18, max_entries=18)
+    bunker_shots = FieldList(IntegerField('Bunker Shots', validators=[
+                             NumberRange(min=0)]), min_entries=18, max_entries=18)
+    penalties = FieldList(IntegerField('Penalties', validators=[
+                          NumberRange(min=0)]), min_entries=18, max_entries=18)
+    submit = SubmitField('Submit Scores')
 
 
 class ProfileForm(FlaskForm):

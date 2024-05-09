@@ -7,8 +7,8 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from werkzeug.urls import url_parse
 import plotly.express as px
 from apscheduler.schedulers.background import BackgroundScheduler
-from models import db, Golfer, Course, Tee, Hole, Round, Score, Milestone, Statistic, connect_db, GameType, check_and_create_milestones
-from forms import RegistrationForm, LoginForm, ScoreEntryForm, GolferSearchForm, CourseSearchForm, GameInitiationForm, ProfileForm, SearchRoundsForm
+from models import db, Golfer, Course, Tee, Hole, Round, Score, Milestone, Statistic, connect_db, GameType, check_and_create_milestones, ScoreDetail
+from forms import RegistrationForm, LoginForm, ScoreEntryForm, GolferSearchForm, CourseSearchForm, GameInitiationForm, ProfileForm, SearchRoundsForm, ScorecardForm
 
 from services import fetch_course_details, get_admin_token, search_courses, fetch_golfer_handicap, save_course_data
 from datetime import datetime
@@ -133,74 +133,98 @@ def search_courses_route():
 @app.route('/courses/<int:course_id>', methods=['GET', 'POST'])
 @login_required
 def view_course(course_id):
-    try:
-        course_details = fetch_course_details(course_id)  # Fetch from API
-        # db_course = Course.query.get(course_id)  # Fetch from database
-        # if not db_course:
-        #     flash('Course details could not be retrieved from the database.', 'error')
-        #     return redirect(url_for('search_courses_route'))
 
-        form = GameInitiationForm(course_id=course_id)
+    course_details = fetch_course_details(course_id)  # Fetch from API
+    form = GameInitiationForm()
+    # db_course = Course.query.get(course_id)  # Fetch from database
+    # if not db_course:
+    #     flash('Course details could not be retrieved from the database.', 'error')
+    #     return redirect(url_for('search_courses_route'))
 
-        # If API provided additional details, merge or use them
-        if course_details:
-            tee_choices = [(tee['TeeSetRatingId'], f"{tee['TeeSetRatingName']} - {tee['TotalYardage']} yards")
-                           for tee in course_details.get('TeeSets', [])]
-            form.tee.choices = tee_choices  # Update form choices with API data
+    # If API provided additional details, merge or use them
+    if course_details:
+        tee_choices = [(tee['TeeSetRatingId'], f"{tee['TeeSetRatingName']} - {tee['TotalYardage']} yards")
+                       for tee in course_details.get('TeeSets', [])]
+        form.tee.choices = tee_choices  # Update form choices with API data
 
-        if form.validate_on_submit():
-            # Process form submission
-            return redirect(url_for('some_game_route', course_id=course_id))
+    if request.method == 'POST' and form.validate_on_submit():
+        tee_id = form.tee.data
+        game_type = form.game_type.data
+        game_type_id = game_type.id if game_type else None
+        use_handicap = form.use_handicap.data
+        # Process form submission
 
-        return render_template('view_course.html', course=course_details, form=form, game_types=GameType.query.all())
-
-    except Exception as e:
-        flash('Failed to retrieve course details due to an error.', 'error')
-        app.logger.error(f"Error retrieving course details: {e}")
-        return redirect(url_for('search_courses_route'))
-
-
-@app.route('/start_round/<int:course_id>', methods=['POST'])
-@login_required
-def start_round(course_id):
-
-    course_details = fetch_course_details(course_id)
-    if request.method == 'POST':
-        if not course_details:
-            flash('Could not retrieve course details. Please try again.', 'error')
-            return redirect(url_for('start_round.html', course=None))
-
-    form = GameInitiationForm(request.form)
-    print("Form data:", request.form)
-    if form.validate_on_submit():
-
-        tee_id = request.form['teeSet']
-        game_type_id = request.form['gameType']
-        use_handicap = 'useHandicap' in request.form
-        current_date = datetime.utcnow()
-
-        new_round = Round(golfer_id=current_user.id, course_id=course_id,
-                          tee_id=tee_id, date=current_date, game_type_id=game_type_id, use_handicap=use_handicap)
+        new_round = Round(
+            golfer_id=current_user.id,
+            course_id=course_id,
+            tee_id=tee_id,
+            date_played=datetime.utcnow(),
+            game_type_id=game_type_id,
+            use_handicap=use_handicap
+        )
         db.session.add(new_round)
         db.session.commit()
-        flash('Round started successfully!', 'success')
-
-        # Redirect to the scorecard view with the new round ID
+        app.logger.info(
+            f"New round started successfully: {new_round.id}")
         return redirect(url_for('scorecard', round_id=new_round.id))
+    elif request.method == 'POST':
+        app.logger.info("Form errors: {}".format(form.errors))
+        flash('Error with form data.', 'error')
 
-    flash('There was an error starting the game. Please check the details and try again.', 'error')
-    return redirect(url_for('view_course', course_id=course_id))
+    return render_template('view_course.html', form=form, course_details=course_details)
 
 
 @app.route('/scorecard/<int:round_id>', methods=['GET', 'POST'])
 @login_required
 def scorecard(round_id):
     round = Round.query.get_or_404(round_id)
-    # view = request.args.get('view', default='current', type=str)
-    # Modify as per your model
-    holes = Hole.query.filter_by(tee_set_id=round.tee_id).all()
+    course_details = fetch_course_details(
+        round.course_id)  # Fetching course details
 
-    return render_template('scorecard.html', round=round, holes=holes)
+    if not course_details or 'TeeSets' not in course_details:
+        flash('Failed to retrieve course details.', 'error')
+        # Redirect to a safe page
+        return redirect(url_for('view_course.html', course_id=round.course_id))
+
+    # Find the matching tee set based on round.tee_id
+    tee_set = next((tee for tee in course_details.get('TeeSets', [])
+                    if str(tee['TeeSetRatingId']) == str(round.tee_id)), None)
+    if not tee_set:
+        flash('Tee set details could not be found.', 'error')
+        return redirect(url_for('view_course.html', course_id=round.course_id))
+
+    holes = tee_set.get('Holes', [])
+    hole_count = len(holes)
+    # Initializing the form with hole count
+    form = ScorecardForm(hole_count=hole_count)
+
+    if form.validate_on_submit():
+        try:
+            for i, hole in enumerate(holes, start=1):
+                score_detail = Score(
+                    round_id=round.id,
+                    hole_id=hole['HoleId'],
+                    score=getattr(form, f'score_{i}').data,
+                    fairway_hit=getattr(form, f'fairway_hit_{i}').data,
+                    green_in_regulation=getattr(
+                        form, f'green_regulation_{i}').data,
+                    putts=getattr(form, f'putts_{i}').data,
+                    bunker_shots=getattr(form, f'bunker_shots_{i}').data,
+                    penalties=getattr(form, f'penalties_{i}').data
+                )
+                db.session.add(score_detail)
+            db.session.commit()
+            flash('Scores submitted successfully!', 'success')
+            return redirect(url_for('submit_score', round_id=round.id))
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Database error: {str(e)}")
+            flash('Failed to save scores due to a database error.', 'error')
+    else:
+        if form.errors:
+            app.logger.debug(f"Form validation errors: {form.errors}")
+
+    return render_template('scorecard.html', form=form, round=round, holes=holes, hole_count=hole_count)
 
 
 @app.route('/submit_score', methods=['POST'])

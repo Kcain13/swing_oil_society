@@ -84,14 +84,17 @@ class Course(db.Model):
     phone = db.Column(db.String(20))
     email = db.Column(db.String(100))
     updated_on = db.Column(db.DateTime)
-    tees = db.relationship('Tee', backref='course',
-                           lazy='dynamic', cascade="all, delete-orphan")
+    tees = db.relationship('Tee',
+                           lazy='dynamic', back_populates='course', cascade="all, delete-orphan")
 
 
 class Tee(db.Model):
     __tablename__ = 'tees'
     id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255))
     course_id = db.Column(db.Integer, db.ForeignKey('courses.id'))
+    yardage = db.Column(db.Integer)
+    course = db.relationship('Course', back_populates='tees')
     holes = db.relationship('Hole', backref='tee',
                             lazy='dynamic', cascade="all, delete-orphan")
 
@@ -129,15 +132,24 @@ class Round(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date_played = db.Column(db.DateTime, default=datetime.utcnow)
     golfer_id = db.Column(db.Integer, db.ForeignKey('golfers.id'))
-    course_id = db.Column(db.Integer, db.ForeignKey('courses.id'))
+    course_id = db.Column(db.Integer)
+    tee_id = db.Column(db.Integer)
     game_type_id = db.Column(db.Integer, db.ForeignKey('game_types.id'))
+    use_handicap = db.Column(db.Boolean, default=False)
     scores = db.relationship('Score', backref='round', lazy='dynamic')
+    golfer = db.relationship('Golfer', backref='rounds')
+    # course = db.relationship('Course', backref='rounds')
+    game_type = db.relationship('GameType', back_populates='rounds')
 
     def __repr__(self):
         return f'<Round on {self.date_played.strftime("%Y-%m-%d")} by Golfer {self.golfer_id}>'
 
     def total_score(self):
         return sum(score.strokes for score in self.scores)
+
+    def fairway_hits_percentage(self):
+        fairway_hits = sum(1 for score in self.scores if score.fairway_hit)
+        return (fairway_hits / len(self.scores)) * 100 if self.scores else 0
 
     def average_score_per_hole(self):
         """Calculate the average score per hole for the round."""
@@ -173,7 +185,12 @@ class Score(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     round_id = db.Column(db.Integer, db.ForeignKey('rounds.id'))
     hole_id = db.Column(db.Integer, db.ForeignKey('holes.id'))
-    strokes = db.Column(db.Integer)
+    score = db.Column(db.Integer)
+    fairway_hit = db.Column(db.Boolean, default=False)
+    green_in_regulation = db.Column(db.Boolean, default=False)
+    putts = db.Column(db.Integer)
+    bunker_shots = db.Column(db.Integer)
+    penalties = db.Column(db.Integer)
 
 
 class Milestone(db.Model):
@@ -253,7 +270,7 @@ class GameType(db.Model):
     # Detailed rules or settings for the game type
     rules = db.Column(db.Text, nullable=True)
 
-    rounds = db.relationship('Round', backref='game_type', lazy='dynamic')
+    rounds = db.relationship('Round', back_populates='game_type')
 
     def __repr__(self):
         return f'<GameType {self.name}>'
@@ -359,37 +376,18 @@ class GameType(db.Model):
 
         db.session.commit()
 
-    def add_game_types():
-        game_types = [
-            {
-                "name": "Match Play",
-                "description": "A game type where players or teams compete on a hole-by-hole basis.",
-                "rules": "The player with the lowest number of strokes on an individual hole wins that hole; the player winning the most holes wins the match."
-            },
-            {
-                "name": "Stroke Play",
-                "description": "Players compete over a round or series of rounds by counting the total number of strokes taken.",
-                "rules": "The total number of strokes taken over one or more rounds determines the winner."
-            },
-            {
-                "name": "Tournament Play",
-                "description": "A competitive format typically involving a large number of players participating in an extended event.",
-                "rules": "The player with the lowest cumulative score at the end of the tournament is declared the winner."
-            },
-            {
-                "name": "Solo Play",
-                "description": "Players play alone focusing on their own scores without direct competition.",
-                "rules": "Focuses on personal bests and improving individual performance metrics."
-            }
-        ]
 
-        for game_type in game_types:
-            if not GameType.query.filter_by(name=game_type['name']).first():
-                new_game_type = GameType(
-                    name=game_type['name'], description=game_type['description'], rules=game_type['rules'])
-                db.session.add(new_game_type)
-
-        db.session.commit()
+class ScoreDetail(db.Model):
+    __tablename__ = 'score_details'
+    id = db.Column(db.Integer, primary_key=True)
+    round_id = db.Column(db.Integer, db.ForeignKey('rounds.id'))
+    hole_id = db.Column(db.Integer, db.ForeignKey('holes.id'))
+    score = db.Column(db.Integer)
+    fairway_hit = db.Column(db.Boolean)
+    green_in_regulation = db.Column(db.Boolean)
+    putts = db.Column(db.Integer)
+    bunker_shots = db.Column(db.Integer)
+    penalties = db.Column(db.Integer)
 
 
 class Leaderboard(db.Model):

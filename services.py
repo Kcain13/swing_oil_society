@@ -230,7 +230,7 @@ def fetch_course_details(course_id):
 #             current_app.logger.error(
 #                 f"Failed to fetch playing handicaps: {response.text}")
 #             return None
-#     else:
+#      else:
 #         current_app.logger.error(
 #             'Failed to authenticate with GHIN API for playing handicaps')
 #         return None

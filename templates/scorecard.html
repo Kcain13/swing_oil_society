@@ -1,28 +1,61 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container">
-    <h1>Scorecard for Round {{ round.id }}</h1>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Hole Number</th>
-                <th>Par</th>
-                <th>Length</th>
-                <th>Score Input</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for hole in holes %}
-            <tr>
-                <td>{{ hole.number }}</td>
-                <td>{{ hole.par }}</td>
-                <td>{{ hole.length }}</td>
-                <td><input type="number" name="score_{{ hole.number }}"></td>
-            </tr>
+<div class="container" aria-labelledby="scorecardHeading">
+    <h1 id="scorecardHeading">Scorecard for Round {{ round.id }}</h1>
+
+    {% if form.errors %}
+    <div class="alert alert-danger">
+        <strong>Errors:</strong>
+        <ul>
+            {% for field_errors in form.errors.values() %}
+            {% for error in field_errors %}
+            <li>{{ error }}</li>
             {% endfor %}
-        </tbody>
-    </table>
-    <button type="submit" class="btn btn-primary">Submit Scores</button>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('scorecard', round_id=round.id) }}"
+        aria-describedby="scorecardFormDescription">
+        <p id="scorecardFormDescription" class="visually-hidden">
+            Fill in the scores for each hole. Include details about fairway hits, greens in regulation, putts, bunker
+            shots, and penalties.
+        </p>
+        {{ form.hidden_tag() }}
+        <table class="table" role="grid">
+            <thead>
+                <tr>
+                    <th scope="col">Hole Number</th>
+                    <th scope="col">Par</th>
+                    <th scope="col">Length</th>
+                    <th scope="col">Score</th>
+                    <th scope="col">Fairway Hit</th>
+                    <th scope="col">Green in Regulation</th>
+                    <th scope="col">Putts</th>
+                    <th scope="col">Bunker Shots</th>
+                    <th scope="col">Penalties</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in range(18) %}
+                <tr>
+                    <th scope="row">{{ holes[i]['Number'] }}</th>
+                    <td>{{ holes[i]['Par'] }}</td>
+                    <td>{{ holes[i]['Length'] }} yards</td>
+                    <td>{{ form.scores[i]() }}<label for="{{ form.scores[i].id }}">Score</label></td>
+                    <td>{{ form.fairway_hits[i]() }}<label for="{{ form.fairway_hits[i].id }}">Fairway Hit</label></td>
+                    <td>{{ form.greens_in_regulation[i]() }}<label
+                            for="{{ form.greens_in_regulation[i].id }}">GIR</label></td>
+                    <td>{{ form.putts[i]() }}<label for="{{ form.putts[i].id }}">Putts</label></td>
+                    <td>{{ form.bunker_shots[i]() }}<label for="{{ form.bunker_shots[i].id }}">Bunker Shots</label></td>
+                    <td>{{ form.penalties[i]() }}<label for="{{ form.penalties[i].id }}">Penalties</label></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {{ form.submit(class="btn btn-primary") }}
+    </form>
 </div>
 {% endblock %}
