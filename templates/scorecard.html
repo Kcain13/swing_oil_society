@@ -1,9 +1,16 @@
 {% extends 'base.html' %}
 
 {% block content %}
+
+<script src="{{ url_for('static', filename='scorecard.js') }}"></script>
+
 <div class="container" aria-labelledby="scorecardHeading">
     <h1 id="scorecardHeading">Scorecard for Round {{ round.id }}</h1>
-
+    <div class="controls">
+        <button id="viewAllHoles">View All Holes</button>
+        <button id="viewSingleHole">View Single Hole</button>
+        <input type="number" id="holeNumber" min="1" max="18" value="1" style="width: 50px;">
+    </div>
     {% if form.errors %}
     <div class="alert alert-danger">
         <strong>Errors:</strong>
@@ -29,7 +36,8 @@
                 <tr>
                     <th scope="col">Hole Number</th>
                     <th scope="col">Par</th>
-                    <th scope="col">Length</th>
+                    <th scope="col">Yardage</th>
+                    <th scope="col">Handicap</th>
                     <th scope="col">Score</th>
                     <th scope="col">Fairway Hit</th>
                     <th scope="col">Green in Regulation</th>
@@ -39,18 +47,18 @@
                 </tr>
             </thead>
             <tbody>
-                {% for i in range(18) %}
+                {% for hole_form, hole_data in hole_forms %}
                 <tr>
-                    <th scope="row">{{ holes[i]['Number'] }}</th>
-                    <td>{{ holes[i]['Par'] }}</td>
-                    <td>{{ holes[i]['Length'] }} yards</td>
-                    <td>{{ form.scores[i]() }}<label for="{{ form.scores[i].id }}">Score</label></td>
-                    <td>{{ form.fairway_hits[i]() }}<label for="{{ form.fairway_hits[i].id }}">Fairway Hit</label></td>
-                    <td>{{ form.greens_in_regulation[i]() }}<label
-                            for="{{ form.greens_in_regulation[i].id }}">GIR</label></td>
-                    <td>{{ form.putts[i]() }}<label for="{{ form.putts[i].id }}">Putts</label></td>
-                    <td>{{ form.bunker_shots[i]() }}<label for="{{ form.bunker_shots[i].id }}">Bunker Shots</label></td>
-                    <td>{{ form.penalties[i]() }}<label for="{{ form.penalties[i].id }}">Penalties</label></td>
+                    <td>{{ hole_data['Number'] }}</td>
+                    <td>{{ hole_data['Par'] }}</td>
+                    <td>{{ hole_data['Length']}} yards</td>
+                    <td>{{ hole_data['Allocation']}}</td>
+                    <td>{{ hole_form.score() }}</td>
+                    <td>{{ hole_form.fairway_hit() }}</td>
+                    <td>{{ hole_form.green_in_regulation() }}</td>
+                    <td>{{ hole_form.putts() }}</td>
+                    <td>{{ hole_form.bunker_shots() }}</td>
+                    <td>{{ hole_form.penalties() }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -58,4 +66,5 @@
         {{ form.submit(class="btn btn-primary") }}
     </form>
 </div>
+
 {% endblock %}

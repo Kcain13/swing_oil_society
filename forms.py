@@ -1,6 +1,6 @@
 from flask import request
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, BooleanField, IntegerField, DateField, SelectField, FieldList
+from wtforms import StringField, PasswordField, SubmitField, BooleanField, IntegerField, DateField, SelectField, FieldList, FormField
 from wtforms.validators import DataRequired, Email, Length, EqualTo, Optional, ValidationError, InputRequired, NumberRange
 from wtforms_sqlalchemy.fields import QuerySelectField
 
@@ -86,20 +86,33 @@ class GameInitiationForm(FlaskForm):
             self.course.data = Course.query.get(course_id)
 
 
+class HoleEntryForm(FlaskForm):
+    # number = IntegerField('Hole Number', validators=[InputRequired()])
+    # par = IntegerField('Par', validators=[InputRequired()])
+    # length = IntegerField('Length', validators=[InputRequired()])
+    # handicap = IntegerField('Handicap', validators=[InputRequired()])
+    score = IntegerField('Score', validators=[
+                         InputRequired(), NumberRange(min=1, max=15)])
+    fairway_hit = BooleanField('Fairway Hit')
+    green_in_regulation = BooleanField('Green in Regulation')
+    putts = IntegerField('Putts', validators=[
+                         InputRequired(), NumberRange(min=0)])
+    bunker_shots = IntegerField(
+        'Bunker Shots', validators=[NumberRange(min=0)])
+    penalties = IntegerField('Penalties', validators=[NumberRange(min=0)])
+
+
 class ScorecardForm(FlaskForm):
-    scores = FieldList(IntegerField('Score', validators=[InputRequired(
-    ), NumberRange(min=1, max=10)]), min_entries=18, max_entries=18)
-    fairway_hits = FieldList(BooleanField(
-        'Fairway Hit'), min_entries=18, max_entries=18)
-    greens_in_regulation = FieldList(BooleanField(
-        'Green in Regulation'), min_entries=18, max_entries=18)
-    putts = FieldList(IntegerField('Putts', validators=[
-                      InputRequired(), NumberRange(min=0)]), min_entries=18, max_entries=18)
-    bunker_shots = FieldList(IntegerField('Bunker Shots', validators=[
-                             NumberRange(min=0)]), min_entries=18, max_entries=18)
-    penalties = FieldList(IntegerField('Penalties', validators=[
-                          NumberRange(min=0)]), min_entries=18, max_entries=18)
+    holes = FieldList(FormField(HoleEntryForm), min_entries=9, max_entries=18)
     submit = SubmitField('Submit Scores')
+
+    def __init__(self, *args, **kwargs):
+        super(ScorecardForm, self).__init__(*args, **kwargs)
+        if 'hole_data' in kwargs:
+            self.holes = []
+            for data in kwargs['hole_data']:
+                hole_form = HoleEntryForm(data=data)
+                self.holes.append_entry(hole_form)
 
 
 class ProfileForm(FlaskForm):

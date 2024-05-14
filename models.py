@@ -101,7 +101,9 @@ class Tee(db.Model):
 
 class Hole(db.Model):
     __tablename__ = 'holes'
-    id = db.Column(db.Integer, primary_key=True)
+    hole_id = db.Column(db.Integer, primary_key=True)
+    # This is the ID from the API
+    api_hole_id = db.Column(db.Integer, unique=True)
     tee_id = db.Column(db.Integer, db.ForeignKey('tees.id'))
     number = db.Column(db.Integer)
     par = db.Column(db.Integer)
@@ -145,7 +147,7 @@ class Round(db.Model):
         return f'<Round on {self.date_played.strftime("%Y-%m-%d")} by Golfer {self.golfer_id}>'
 
     def total_score(self):
-        return sum(score.strokes for score in self.scores)
+        return sum(score.score for score in self.scores.all())
 
     def fairway_hits_percentage(self):
         fairway_hits = sum(1 for score in self.scores if score.fairway_hit)
@@ -159,23 +161,66 @@ class Round(db.Model):
 
     def best_score(self):
         """Find the best (lowest) score of the round."""
-        return min((score.strokes for score in self.scores.all()), default=None)
+        return min((score.score for score in self.scores.all()), default=None)
 
     def worst_score(self):
         """Find the worst (highest) score of the round."""
-        return max((score.strokes for score in self.scores.all()), default=None)
+        return max((score.score for score in self.scores.all()), default=None)
 
-    def create_score_chart():
-        """Generates a bar chart for the scores of a round."""
-        holes = [score.hole.number for score in round.scores.order_by(
-            'hole_id').all()]
-        strokes = [
-            score.strokes for score in round.scores.order_by('hole_id').all()]
+    def calculate_round_statistics(self):
+        scores = self.scores.all()  # Ensure you fetch scores only once per function call
+        total_score = sum(score.score for score in scores)
+        first_nine_score = sum(
+            score.score for score in scores if score.hole_number <= 9)
+        last_nine_score = sum(
+            score.score for score in scores if score.hole_number > 9)
+        total_putts = sum(score.putts for score in scores)
+        total_penalties = sum(score.penalties for score in scores)
+        total_bunker_shots = sum(score.bunker_shots for score in scores)
+        num_scores = len(scores)
 
-        fig = px.bar(x=holes, y=strokes, labels={
-            'x': 'Hole Number', 'y': 'Strokes'}, title="Scores Per Hole")
-        fig.update_layout(xaxis_title="Hole", yaxis_title="Strokes",
-                          title="Round Performance")
+        fairways_hit = sum(1 for score in scores if score.fairway_hit)
+        greens_in_regulation = sum(
+            1 for score in scores if score.green_in_regulation)
+
+        statistics = {
+            'total_score': total_score,
+            'first_nine_score': first_nine_score,
+            'last_nine_score': last_nine_score,
+            'total_putts': total_putts,
+            'fairways_hit_ratio': f"{fairways_hit}/{num_scores}",
+            'greens_in_regulation_ratio': f"{greens_in_regulation}/{num_scores}",
+            'total_penalties': total_penalties,
+            'total_bunker_shots': total_bunker_shots,
+        }
+
+        return statistics
+
+    def create_score_chart(self):
+        scores = self.scores.order_by('hole_number').all()
+
+        # Calculate average scores by par type, making sure to handle division by zero
+        par3_scores = [s.score for s in scores if s.hole_par == 3]
+        par4_scores = [s.score for s in scores if s.hole_par == 4]
+        par5_scores = [s.score for s in scores if s.hole_par == 5]
+
+        par3_avg = sum(par3_scores) / len(par3_scores) if par3_scores else 0
+        par4_avg = sum(par4_scores) / len(par4_scores) if par4_scores else 0
+        par5_avg = sum(par5_scores) / len(par5_scores) if par5_scores else 0
+
+        # Create bar chart for average scores by par
+        fig = px.bar(
+            x=['Par 3', 'Par 4', 'Par 5'],
+            y=[par3_avg, par4_avg, par5_avg],
+            labels={'x': 'Hole Par', 'y': 'Average Score'},
+            title="Average Scores by Hole Par"
+        )
+        fig.update_layout(
+            xaxis_title="Hole Par",
+            yaxis_title="Average Score",
+            title="Average Score by Hole Par"
+        )
+
         graph_json = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
         return graph_json
 
@@ -184,13 +229,23 @@ class Score(db.Model):
     __tablename__ = 'scores'
     id = db.Column(db.Integer, primary_key=True)
     round_id = db.Column(db.Integer, db.ForeignKey('rounds.id'))
-    hole_id = db.Column(db.Integer, db.ForeignKey('holes.id'))
+    # hole_id = db.Column(db.Integer, db.ForeignKey('holes.api_hole_id'))
+    hole_number = db.Column(db.Integer)
+    hole_par = db.Column(db.Integer)
+    hole_handicap = db.Column(db.Integer)
+    yardage = db.Column(db.Integer)
     score = db.Column(db.Integer)
     fairway_hit = db.Column(db.Boolean, default=False)
     green_in_regulation = db.Column(db.Boolean, default=False)
     putts = db.Column(db.Integer)
     bunker_shots = db.Column(db.Integer)
     penalties = db.Column(db.Integer)
+
+    def is_fairway_hit(self):
+        return self.fairway_hit
+
+    def is_green_in_regulation(self):
+        return self.green_in_regulation
 
 
 class Milestone(db.Model):
@@ -377,17 +432,17 @@ class GameType(db.Model):
         db.session.commit()
 
 
-class ScoreDetail(db.Model):
-    __tablename__ = 'score_details'
-    id = db.Column(db.Integer, primary_key=True)
-    round_id = db.Column(db.Integer, db.ForeignKey('rounds.id'))
-    hole_id = db.Column(db.Integer, db.ForeignKey('holes.id'))
-    score = db.Column(db.Integer)
-    fairway_hit = db.Column(db.Boolean)
-    green_in_regulation = db.Column(db.Boolean)
-    putts = db.Column(db.Integer)
-    bunker_shots = db.Column(db.Integer)
-    penalties = db.Column(db.Integer)
+# class ScoreDetail(db.Model):
+#     __tablename__ = 'score_details'
+#     id = db.Column(db.Integer, primary_key=True)
+#     round_id = db.Column(db.Integer, db.ForeignKey('rounds.id'))
+#     hole_id = db.Column(db.Integer, db.ForeignKey('holes.id'))
+#     score = db.Column(db.Integer)
+#     fairway_hit = db.Column(db.Boolean)
+#     green_in_regulation = db.Column(db.Boolean)
+#     putts = db.Column(db.Integer)
+#     bunker_shots = db.Column(db.Integer)
+#     penalties = db.Column(db.Integer)
 
 
 class Leaderboard(db.Model):

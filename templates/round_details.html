@@ -2,13 +2,31 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2>Round Details</h2>
-    <!-- Round statistics display here -->
+    <h2>Round Details for Round ID: {{ round.id }}</h2>
+
+    <div class="statistics">
+        <p>Total Score: {{ statistics.total_score }}</p>
+        <p>Score for First 9 Holes: {{ statistics.first_nine_score }}</p>
+        <p>Score for Last 9 Holes: {{ statistics.last_nine_score }}</p>
+        <p>Total Putts: {{ statistics.total_putts }}</p>
+        <p>Total Fairways Hit: {{ statistics.fairways_hit_ratio }}</p>
+        <p>Total Greens in Regulation: {{ statistics.greens_in_regulation_ratio }}</p>
+        <p>Total Penalties: {{ statistics.total_penalties }}</p>
+        <p>Total Bunker Shots: {{ statistics.total_bunker_shots }}</p>
+    </div>
+
     <div id="graph"></div>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script>
-        const figures = JSON.parse('{{ graph_json | tojson | safe }}');
-        Plotly.newPlot('graph', figures.data, figures.layout);
+        document.addEventListener('DOMContentLoaded', function () {
+            const graphData = {{ graph_json | tojson | safe
+        }};
+        if (graphData && graphData.data && graphData.layout) {
+            Plotly.newPlot('graph', graphData.data, graphData.layout);
+        } else {
+            document.getElementById('graph').innerHTML = 'No data available for the graph.';
+        }
+        });
     </script>
 </div>
 {% endblock %}

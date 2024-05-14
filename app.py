@@ -7,9 +7,9 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from werkzeug.urls import url_parse
 import plotly.express as px
 from apscheduler.schedulers.background import BackgroundScheduler
-from models import db, Golfer, Course, Tee, Hole, Round, Score, Milestone, Statistic, connect_db, GameType, check_and_create_milestones, ScoreDetail
-from forms import RegistrationForm, LoginForm, ScoreEntryForm, GolferSearchForm, CourseSearchForm, GameInitiationForm, ProfileForm, SearchRoundsForm, ScorecardForm
-
+from models import db, Golfer, Course, Tee, Hole, Round, Score, Milestone, Statistic, connect_db, GameType, check_and_create_milestones
+from forms import RegistrationForm, LoginForm, HoleEntryForm, GolferSearchForm, CourseSearchForm, GameInitiationForm, ProfileForm, SearchRoundsForm, ScorecardForm
+from flask_wtf import CSRFProtect
 from services import fetch_course_details, get_admin_token, search_courses, fetch_golfer_handicap, save_course_data
 from datetime import datetime
 
@@ -29,7 +29,7 @@ app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = True
 app.config['GHIN_ADMIN_USER'] = os.getenv('GHIN_ADMIN_USER')
 app.config['GHIN_ADMIN_PASSWORD'] = os.getenv('GHIN_ADMIN_PASSWORD')
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "it's a secret")
-
+csrf = CSRFProtect(app)
 
 if not app.config['GHIN_ADMIN_USER'] or not app.config['GHIN_ADMIN_PASSWORD']:
     raise Exception("API credentials are not set in environment variables.")
@@ -178,129 +178,137 @@ def view_course(course_id):
 @login_required
 def scorecard(round_id):
     round = Round.query.get_or_404(round_id)
-    course_details = fetch_course_details(
-        round.course_id)  # Fetching course details
+    course_details = fetch_course_details(round.course_id)
 
     if not course_details or 'TeeSets' not in course_details:
         flash('Failed to retrieve course details.', 'error')
-        # Redirect to a safe page
-        return redirect(url_for('view_course.html', course_id=round.course_id))
+        return redirect(url_for('view_course', course_id=round.course_id))
 
-    # Find the matching tee set based on round.tee_id
-    tee_set = next((tee for tee in course_details.get('TeeSets', [])
+    tee_set = next((tee for tee in course_details['TeeSets']
                     if str(tee['TeeSetRatingId']) == str(round.tee_id)), None)
     if not tee_set:
         flash('Tee set details could not be found.', 'error')
-        return redirect(url_for('view_course.html', course_id=round.course_id))
+        return redirect(url_for('view_course', course_id=round.course_id))
 
-    holes = tee_set.get('Holes', [])
-    hole_count = len(holes)
-    # Initializing the form with hole count
-    form = ScorecardForm(hole_count=hole_count)
+    holes = tee_set['Holes']
+    form = ScorecardForm()
+
+    if request.method == 'GET':
+        form.holes.entries.clear()  # Clear previous entries to avoid duplication
+        for hole_data in tee_set['Holes']:
+            hole_form = HoleEntryForm()
+            # Ensure the form is populated correctly
+            form.holes.append_entry(hole_form.data)
 
     if form.validate_on_submit():
         try:
-            for i, hole in enumerate(holes, start=1):
-                score_detail = Score(
+            scores_to_add = []
+            for hole_form, hole_data in zip(form.holes.entries, holes):
+                score = Score(
                     round_id=round.id,
-                    hole_id=hole['HoleId'],
-                    score=getattr(form, f'score_{i}').data,
-                    fairway_hit=getattr(form, f'fairway_hit_{i}').data,
-                    green_in_regulation=getattr(
-                        form, f'green_regulation_{i}').data,
-                    putts=getattr(form, f'putts_{i}').data,
-                    bunker_shots=getattr(form, f'bunker_shots_{i}').data,
-                    penalties=getattr(form, f'penalties_{i}').data
+
+                    hole_number=hole_data['Number'],
+                    # hole_id=hole_data['HoleId'],
+                    hole_par=hole_data['Par'],
+                    yardage=hole_data['Length'],
+                    hole_handicap=hole_data['Allocation'],
+                    score=hole_form.score.data,
+                    fairway_hit=hole_form.fairway_hit.data,
+                    green_in_regulation=hole_form.green_in_regulation.data,
+                    putts=hole_form.putts.data,
+                    bunker_shots=hole_form.bunker_shots.data,
+                    penalties=hole_form.penalties.data
                 )
-                db.session.add(score_detail)
+                scores_to_add.append(score)
+            db.session.add_all(scores_to_add)
             db.session.commit()
             flash('Scores submitted successfully!', 'success')
-            return redirect(url_for('submit_score', round_id=round.id))
+            return redirect(url_for('round_details', round_id=round.id))
         except Exception as e:
             db.session.rollback()
-            app.logger.error(f"Database error: {str(e)}")
-            flash('Failed to save scores due to a database error.', 'error')
+            app.logger.error(f"Failed to save scores: {str(e)}")
+            flash(
+                'Failed to save scores due to a database error. Error: {}'.format(e), 'error')
     else:
-        if form.errors:
-            app.logger.debug(f"Form validation errors: {form.errors}")
+        flash('There were errors with your submission.', 'error')
+        print("form errors:", form.errors)
+    hole_forms = zip(form.holes.entries, holes)
+    return render_template('scorecard.html', form=form, round=round, hole_forms=hole_forms)
 
-    return render_template('scorecard.html', form=form, round=round, holes=holes, hole_count=hole_count)
+# @app.route('/round_details/<int:round_id>', methods=['POST'])
+# @login_required
+# def submit_score(round_id):
+#     form = ScoreEntryForm()
+#     if form.validate_on_submit():
+#         score = Score(
+#             round_id=round_id,
+#             hole_id=form.hole_number.data,
+#             strokes=form.strokes.data
+#         )
+#         db.session.add(score)
+#         db.session.commit()
 
+#         # Check and create milestones after score submission
+#         check_and_create_milestones(golfer_id=current_user.id, score=score)
 
-@app.route('/submit_score', methods=['POST'])
-@login_required
-def submit_score(round_id):
-    form = ScoreEntryForm()
-    if form.validate_on_submit():
-        score = Score(
-            round_id=round_id,
-            hole_id=form.hole_number.data,
-            strokes=form.strokes.data
-        )
-        db.session.add(score)
-        db.session.commit()
-
-        # Check and create milestones after score submission
-        check_and_create_milestones(golfer_id=current_user.id, score=score)
-
-        flash('Score submitted successfully!', 'success')
-        return redirect(url_for('enter_scores', round_id=round_id))
-    return render_template('submit_score.html', form=form, round_id=round_id)
-
-
-def check_milestones(score, hole):
-    golfer_id = score.round.golfer_id
-    if score.strokes == 1:
-        create_milestone(golfer_id, "Hole-in-One",
-                         f"Achieved hole-in-one on hole {hole.number}")
-
-    if (hole.par == 4 and score.strokes == 2) or (hole.par == 5 and score.strokes == 3):
-        create_milestone(golfer_id, "Eagle",
-                         f"Achieved eagle on hole {hole.number}")
-
-    if hole.par == 5 and score.strokes == 2:
-        create_milestone(golfer_id, "Albatross",
-                         f"Achieved albatross on hole {hole.number}")
-
-    if hole.par == 4 and score.strokes == 4 and score.bunker_shots >= 2:
-        create_milestone(golfer_id, "Double-Sandy",
-                         f"Achieved double-sandy on hole {hole.number}")
+#         flash('Score submitted successfully!', 'success')
+#         return redirect(url_for('enter_scores', round_id=round_id))
+#     return render_template('submit_score.html', form=form, round_id=round_id)
 
 
-def create_milestone(golfer_id, type, details):
-    date = datetime.utcnow()
-    new_milestone = Milestone(
-        golfer_id=golfer_id, type=type, details=details, date=date)
-    db.session.add(new_milestone)
-    db.session.commit()
+# def check_milestones(score, hole):
+#     golfer_id = score.round.golfer_id
+#     if score.strokes == 1:
+#         create_milestone(golfer_id, "Hole-in-One",
+#                          f"Achieved hole-in-one on hole {hole.number}")
+
+#     if (hole.par == 4 and score.strokes == 2) or (hole.par == 5 and score.strokes == 3):
+#         create_milestone(golfer_id, "Eagle",
+#                          f"Achieved eagle on hole {hole.number}")
+
+#     if hole.par == 5 and score.strokes == 2:
+#         create_milestone(golfer_id, "Albatross",
+#                          f"Achieved albatross on hole {hole.number}")
+
+#     if hole.par == 4 and score.strokes == 4 and score.bunker_shots >= 2:
+#         create_milestone(golfer_id, "Double-Sandy",
+#                          f"Achieved double-sandy on hole {hole.number}")
 
 
-def check_tournament_win(golfer_id):
-    # Placeholder for checking if a golfer won a tournament
-    # You would need to implement the logic based on your application's data
-    create_milestone(golfer_id, "Tournament Win", "Won a tournament")
+# def create_milestone(golfer_id, type, details):
+#     date = datetime.utcnow()
+#     new_milestone = Milestone(
+#         golfer_id=golfer_id, type=type, details=details, date=date)
+#     db.session.add(new_milestone)
+#     db.session.commit()
 
 
-@app.route('/complete_round/<int:round_id>', methods=['POST'])
-@login_required
-def complete_round(round_id):
-    round = Round.query.get_or_404(round_id)
-    game_type = GameType.query.filter_by(id=round.game_type_id).first()
+# def check_tournament_win(golfer_id):
+#     # Placeholder for checking if a golfer won a tournament
+#     # You would need to implement the logic based on your application's data
+#     create_milestone(golfer_id, "Tournament Win", "Won a tournament")
 
-    # Update leaderboard based on game type rules
-    game_type.update_leaderboard(round_id)
 
-    # Update golfer statistics
-    statistics = Statistic.query.filter_by(
-        golfer_id=round.golfer_id).first()
-    if not statistics:
-        statistics = Statistic(golfer_id=round.golfer_id)
-        db.session.add(statistics)
-    statistics.update_statistics(round)
+# @app.route('/complete_round/<int:round_id>', methods=['POST'])
+# @login_required
+# def complete_round(round_id):
+#     round = Round.query.get_or_404(round_id)
+#     game_type = GameType.query.filter_by(id=round.game_type_id).first()
 
-    db.session.commit()
-    flash('Round completed and leaderboard updated!', 'success')
-    return redirect(url_for('round_details', round_id=round_id))
+#     # Update leaderboard based on game type rules
+#     game_type.update_leaderboard(round_id)
+
+#     # Update golfer statistics
+#     statistics = Statistic.query.filter_by(
+#         golfer_id=round.golfer_id).first()
+#     if not statistics:
+#         statistics = Statistic(golfer_id=round.golfer_id)
+#         db.session.add(statistics)
+#     statistics.update_statistics(round)
+
+#     db.session.commit()
+#     flash('Round completed and leaderboard updated!', 'success')
+#     return redirect(url_for('round_details', round_id=round_id))
 
 
 @app.route('/view_golfer', methods=['POST'])
@@ -327,13 +335,21 @@ def view_golfer_rounds(golfer_id):
 @app.route('/round_details/<int:round_id>')
 def round_details(round_id):
     round = Round.query.get_or_404(round_id)
-    total_score = round.total_score()
-    average_score = round.average_score_per_hole()
-    best_score = round.best_score()
-    worst_score = round.worst_score()
-    graph_json = round.create_score_chart()
-    return render_template('round_details.html', round=round, total_score=total_score,
-                           average_score=average_score, best_score=best_score, worst_score=worst_score, graph_json=graph_json)
+    statistics = round.calculate_round_statistics()
+    # Log the statistics
+
+    app.logger.debug("Statistics: " + str(statistics))
+    app.logger.info(f"Statistics for round {round_id}: {statistics}")
+
+    try:
+        graph_json = round.create_score_chart()
+        app.logger.debug("Graph JSON: " + str(graph_json))
+        app.logger.info(f"Graph JSON: {graph_json}")
+    except Exception as e:
+        app.logger.error(f"Error creating graph JSON: {e}")
+        graph_json = {}  # Provide an empty dict if chart creation fails
+
+    return render_template('round_details.html', round=round, statistics=statistics, graph_json=graph_json)
 
 
 @app.route('/search_rounds', methods=['GET', 'POST'])
